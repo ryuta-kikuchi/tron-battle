@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <set>
 #include <memory>
+#include <random>
+#include <chrono>
+
+std::random_device rnd;
+std::mt19937 mt(rnd());
+
+constexpr int INF = 1000000000LL;
 
 using namespace std;
 
@@ -124,11 +131,22 @@ public:
         current_player_ += 1;
         current_player_ %= n_;
     }
+
+    bool isWin()
+    {
+        return eliminated_players_.size() == n_ - 1 && eliminated_players_.count(p_) == 0;
+    }
+
+    bool isLose()
+    {
+        return eliminated_players_.count(p_) == 1;
+    }
 };
 
 string movementToString(const int current_x, const int current_y, const int next_x, const int next_y)
 {
-    if (next_x == -1 && next_y == -1) {
+    if (next_x == -1 && next_y == -1)
+    {
         return "CAN'T MOVE";
     }
 
@@ -149,6 +167,46 @@ string movementToString(const int current_x, const int current_y, const int next
         }
     }
     return "ERROR";
+}
+
+pair<int, int> randomAction(shared_ptr<GameState> state)
+{
+    auto legal_actions = state->getLegalActions();
+    return legal_actions[mt() % (legal_actions.size())];
+}
+
+double playout(shared_ptr<GameState> state)
+{
+    if (state->isLose())
+        return 0;
+    if (state->isWin())
+        return 1;
+    auto selected_action = randomAction(state);
+    state->advance(selected_action.first, selected_action.second);
+    return playout(state);
+}
+
+pair<int, int> primitiveMontecarloAction(shared_ptr<GameState> state, int num_of_playouts)
+{
+    auto legal_actions = state->getLegalActions();
+    double best_value = -INF;
+    int best_i = -1;
+    for (int i = 0; i < legal_actions.size(); i++)
+    {
+        double value = 0;
+        for (int j = 0; j < num_of_playouts; j++)
+        {
+            shared_ptr<GameState> next_state = make_shared<GameState>(*state);
+            next_state->advance(legal_actions[i].first, legal_actions[i].second);
+            value += playout(next_state);
+        }
+        if (value > best_value)
+        {
+            best_i = i;
+            best_value = value;
+        }
+    }
+    return legal_actions[best_i];
 }
 
 int main()
@@ -206,10 +264,11 @@ int main()
         // Write an action using cout. DON'T FORGET THE "<< endl"
         // To debug: cerr << "Debug messages..." << endl;
 
-        auto legal_actions = game_state->getLegalActions();
-        game_state->advance(legal_actions[0].first, legal_actions[0].second);
-        auto action = movementToString(player_movements[p].first, player_movements[p].second, legal_actions[0].first, legal_actions[0].second);
-        cerr << player_movements[p].first << " " << player_movements[p].second << " " << legal_actions[0].first << " " << legal_actions[0].second << endl;
+        auto best_action = primitiveMontecarloAction(game_state, 10);
+        game_state->advance(best_action.first, best_action.second);
+
+        auto action = movementToString(player_movements[p].first, player_movements[p].second, best_action.first, best_action.second);
+        // cerr << player_movements[p].first << " " << player_movements[p].second << " " << legal_actions[0].first << " " << legal_actions[0].second << endl;
         cout << action << endl;
     }
 }
