@@ -19,12 +19,6 @@ private:
     static constexpr int dy_[4] = {0, 0, 1, -1};
     static constexpr int MAX_X_ = 30;
     static constexpr int MAX_Y_ = 20;
-    static constexpr char directions[4][10] = {
-        "RIGHT",
-        "LEFT",
-        "DOWN",
-        "UP",
-    };
 
     const int n_;
     const int p_;
@@ -35,7 +29,7 @@ private:
 
     bool isOutOfField(const int x, const int y) const
     {
-        if (x < 0 || MAX_X_ < x || y < 0 || MAX_Y_ < y)
+        if (x < 0 || MAX_X_ <= x || y < 0 || MAX_Y_ <= y)
         {
             return true;
         }
@@ -130,29 +124,32 @@ public:
         current_player_ += 1;
         current_player_ %= n_;
     }
-
-    string actionToString(const int x, const int y) const
-    {
-        if (x == -1 && y == -1)
-        {
-            return "LEFT";
-        }
-
-        const int current_x = player_positions_[p_].first;
-        const int current_y = player_positions_[p_].second;
-
-        for (int i = 0; i < 4; i++)
-        {
-            const int next_x = current_x + dx_[i];
-            const int next_y = current_y + dy_[i];
-            if (next_x == x && next_y == y)
-            {
-                return string(directions[i]);
-            }
-        }
-        return "ERROR";
-    }
 };
+
+string movementToString(const int current_x, const int current_y, const int next_x, const int next_y)
+{
+    if (next_x == -1 && next_y == -1) {
+        return "CAN'T MOVE";
+    }
+
+    static constexpr int dx_[4] = {1, -1, 0, 0};
+    static constexpr int dy_[4] = {0, 0, 1, -1};
+    static constexpr char directions[4][10] = {
+        "RIGHT",
+        "LEFT",
+        "DOWN",
+        "UP",
+    };
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (next_x == current_x + dx_[i] && next_y == current_y + dy_[i])
+        {
+            return string(directions[i]);
+        }
+    }
+    return "ERROR";
+}
 
 int main()
 {
@@ -210,7 +207,9 @@ int main()
         // To debug: cerr << "Debug messages..." << endl;
 
         auto legal_actions = game_state->getLegalActions();
-        auto action = game_state->actionToString(legal_actions[0].first, legal_actions[0].second);
+        game_state->advance(legal_actions[0].first, legal_actions[0].second);
+        auto action = movementToString(player_movements[p].first, player_movements[p].second, legal_actions[0].first, legal_actions[0].second);
+        cerr << player_movements[p].first << " " << player_movements[p].second << " " << legal_actions[0].first << " " << legal_actions[0].second << endl;
         cout << action << endl;
     }
 }
